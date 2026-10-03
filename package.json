@@ -2,9 +2,21 @@
   "name": "shopeasy",
   "version": "1.0.0",
   "description": "ShopEasy - Online Shopping Platform",
+  "main": "backend/server.js",
   "scripts": {
-    "start": "npm run start:backend",
-    "start:backend": "cd backend && npm start",
+    "build": "npm install",
+    "start": "node backend/server.js",
+    "start:backend": "node backend/server.js",
     "start:frontend": "cd frontend && npm start"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "firebase-admin": "^14.5.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.4",
+    "socket.io": "^4.8.4"
   }
 }

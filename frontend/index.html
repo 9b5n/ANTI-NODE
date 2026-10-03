@@ -201,8 +201,10 @@
   </div>
 
   <script>
-    // Backend API & WebSocket URL
-    const BACKEND_URL = 'http://localhost:5001';
+    // Backend API & WebSocket URL (Auto-detects Render live URL vs localhost)
+    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? (window.location.port === '5001' ? window.location.origin : 'http://localhost:5001')
+      : window.location.origin;
     const API = `${BACKEND_URL}/api`;
     let currentUser = JSON.parse(localStorage.getItem('user')) || null;
     let token = localStorage.getItem('token') || '';
