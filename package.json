@@ -1,0 +1,10 @@
+{
+  "name": "shopeasy",
+  "version": "1.0.0",
+  "description": "ShopEasy - Online Shopping Platform",
+  "scripts": {
+    "start": "npm run start:backend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start"
+  }
+}

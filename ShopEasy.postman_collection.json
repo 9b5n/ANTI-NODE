@@ -1,0 +1,267 @@
+{
+  "info": {
+    "name": "ShopEasy Backend API",
+    "description": "Collection of all API endpoints for ShopEasy Online Shopping Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "1. Register (User)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"user\"\n}"
+            },
+            "url": "http://localhost:5000/api/auth/register"
+          }
+        },
+        {
+          "name": "2. Register (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": "http://localhost:5000/api/auth/register"
+          }
+        },
+        {
+          "name": "3. Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "http://localhost:5000/api/auth/login"
+          }
+        },
+        {
+          "name": "4. Google Social Auth",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"googleuser@example.com\",\n  \"name\": \"Google User\"\n}"
+            },
+            "url": "http://localhost:5000/api/auth/google"
+          }
+        },
+        {
+          "name": "5. Facebook Social Auth",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"fbuser@example.com\",\n  \"name\": \"FB User\"\n}"
+            },
+            "url": "http://localhost:5000/api/auth/facebook"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "1. Create Product (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Headphones\",\n  \"description\": \"Noise cancelling over-ear headphones\",\n  \"price\": 199,\n  \"category\": \"Electronics\",\n  \"stock\": 50\n}"
+            },
+            "url": "http://localhost:5000/api/products"
+          }
+        },
+        {
+          "name": "2. Get All Products (Filter & Search)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/products?category=Electronics&minPrice=50&maxPrice=300",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "category", "value": "Electronics" },
+                { "key": "minPrice", "value": "50" },
+                { "key": "maxPrice", "value": "300" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get Product By ID",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/products/{{PRODUCT_ID}}"
+          }
+        },
+        {
+          "name": "4. Update Product (Admin Only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 179,\n  \"stock\": 45\n}"
+            },
+            "url": "http://localhost:5000/api/products/{{PRODUCT_ID}}"
+          }
+        },
+        {
+          "name": "5. Delete Product (Admin Only)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }
+            ],
+            "url": "http://localhost:5000/api/products/{{PRODUCT_ID}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "1. Get User Cart",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "url": "http://localhost:5000/api/cart"
+          }
+        },
+        {
+          "name": "2. Add Item to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{PRODUCT_ID}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": "http://localhost:5000/api/cart"
+          }
+        },
+        {
+          "name": "3. Update Cart Item Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3\n}"
+            },
+            "url": "http://localhost:5000/api/cart/{{PRODUCT_ID}}"
+          }
+        },
+        {
+          "name": "4. Remove Item from Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "url": "http://localhost:5000/api/cart/{{PRODUCT_ID}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "1. Checkout (Create Order)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "url": "http://localhost:5000/api/orders"
+          }
+        },
+        {
+          "name": "2. Get Order History (Aggregation)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "url": "http://localhost:5000/api/orders"
+          }
+        },
+        {
+          "name": "3. Get Order By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "url": "http://localhost:5000/api/orders/{{ORDER_ID}}"
+          }
+        },
+        {
+          "name": "4. Update Order Status (Admin Only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"shipped\"\n}"
+            },
+            "url": "http://localhost:5000/api/orders/{{ORDER_ID}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "1. Send Push Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{USER_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Order Confirmed\",\n  \"body\": \"Your order #1234 has been successfully placed!\"\n}"
+            },
+            "url": "http://localhost:5000/api/notifications/send"
+          }
+        }
+      ]
+    }
+  ]
+}

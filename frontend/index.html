@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopEasy - Full Online Shopping Platform</title>
+  <!-- Socket.io Client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 50px; }
+    
+    /* Header */
+    header { background: #1e293b; color: white; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 22px; font-weight: 700; color: #38bdf8; }
+    .header-user { display: flex; align-items: center; gap: 15px; }
+    .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+    .badge-admin { background: #f59e0b; color: #000; }
+    .badge-user { background: #10b981; color: #fff; }
+
+    /* Nav Tabs */
+    nav { background: white; border-bottom: 1px solid #e2e8f0; display: flex; padding: 0 32px; gap: 20px; }
+    nav button { padding: 14px 16px; border: none; background: none; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
+    nav button.active { color: #0284c7; border-bottom: 2px solid #0284c7; }
+
+    /* Main Container */
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    h2 { font-size: 18px; margin-bottom: 15px; color: #0f172a; }
+
+    /* Forms & Inputs */
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    input, select, textarea { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; flex: 1; min-width: 140px; }
+    button.btn { padding: 10px 18px; background: #0284c7; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    button.btn:hover { background: #0369a1; }
+    button.btn-danger { background: #ef4444; }
+    button.btn-danger:hover { background: #dc2626; }
+    button.btn-secondary { background: #64748b; }
+
+    /* Product Grid */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+    .product-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+    .product-card h3 { font-size: 16px; margin-bottom: 6px; }
+    .product-card p { font-size: 13px; color: #64748b; margin-bottom: 10px; }
+    .price-stock { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: bold; }
+    .price { color: #0284c7; font-size: 18px; }
+    .stock { font-size: 12px; color: #16a34a; }
+
+    /* Cart Table */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    th { background: #f8fafc; color: #475569; }
+
+    /* Socket Log Box */
+    .log-box { background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 13px; padding: 14px; border-radius: 6px; max-height: 180px; overflow-y: auto; }
+    .log-item { margin-bottom: 6px; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <h1>ShopEasy Online Platform</h1>
+    <div class="header-user">
+      <span id="user-info">Not logged in</span>
+      <button class="btn btn-secondary" onclick="logout()" id="logout-btn" style="display:none;">Logout</button>
+    </div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav>
+    <button class="active" onclick="switchTab('auth')">🔐 Auth (Login/Register)</button>
+    <button onclick="switchTab('shop')">🛍️ Products</button>
+    <button onclick="switchTab('cart')">🛒 Cart (<span id="cart-count">0</span>)</button>
+    <button onclick="switchTab('orders')">📦 Orders</button>
+    <button onclick="switchTab('admin')">👑 Admin</button>
+  </nav>
+
+  <div class="container">
+
+    <!-- Real-time Socket.io Notification Banner -->
+    <div class="card">
+      <h2>⚡ Real-Time Socket.io Inventory Monitor</h2>
+      <div id="socket-status" style="font-size:12px; color:#16a34a; font-weight:bold; margin-bottom:8px;">Connecting to WebSockets...</div>
+      <div class="log-box" id="socket-logs">Live inventory events stream will appear here...</div>
+    </div>
+
+    <!-- 1. AUTH TAB -->
+    <div id="tab-auth" class="tab-content active">
+      <div class="card">
+        <h2>Register / Login</h2>
+        <div class="form-row">
+          <input type="text" id="auth-name" placeholder="Full Name (for register)">
+          <input type="email" id="auth-email" placeholder="Email (e.g. user@test.com)">
+          <input type="password" id="auth-password" placeholder="Password (min 6 chars)">
+          <select id="auth-role">
+            <option value="user">Role: User</option>
+            <option value="admin">Role: Admin</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <button class="btn" onclick="registerUser()">Register</button>
+          <button class="btn" style="background:#10b981;" onclick="loginUser()">Login</button>
+          <button class="btn" style="background:#ea4335;" onclick="socialLogin('Google')">Google Login (Firebase)</button>
+          <button class="btn" style="background:#1877f2;" onclick="socialLogin('Facebook')">Facebook Login (Firebase)</button>
+        </div>
+        <div id="auth-msg" style="margin-top:10px; font-weight:bold;"></div>
+      </div>
+    </div>
+
+    <!-- 2. SHOP PRODUCTS TAB -->
+    <div id="tab-shop" class="tab-content">
+      <div class="card">
+        <h2>Search & Filter Products</h2>
+        <div class="form-row">
+          <input type="text" id="search-keyword" placeholder="Search product name or keyword...">
+          <select id="filter-category">
+            <option value="">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Home">Home</option>
+          </select>
+          <input type="number" id="min-price" placeholder="Min Price ($)">
+          <input type="number" id="max-price" placeholder="Max Price ($)">
+          <button class="btn" onclick="loadProducts()">Filter</button>
+          <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Available Products</h2>
+        <div class="product-grid" id="product-list">Loading products...</div>
+      </div>
+    </div>
+
+    <!-- 3. CART TAB -->
+    <div id="tab-cart" class="tab-content">
+      <div class="card">
+        <h2>Your Shopping Cart</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Price</th>
+              <th>Quantity</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="cart-items">
+            <tr><td colspan="5">Cart is empty</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top: 20px; display:flex; justify-content:space-between; align-items:center;">
+          <h3>Cart Total: $<span id="cart-total">0</span></h3>
+          <button class="btn" style="background:#10b981; font-size:16px;" onclick="checkout()">Proceed to Checkout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. ORDERS TAB -->
+    <div id="tab-orders" class="tab-content">
+      <div class="card">
+        <h2>My Order History (MongoDB Aggregation)</h2>
+        <button class="btn btn-secondary" style="margin-bottom:12px;" onclick="loadOrders()">Refresh Orders</button>
+        <div id="orders-list">No orders found.</div>
+      </div>
+    </div>
+
+    <!-- 5. ADMIN TAB -->
+    <div id="tab-admin" class="tab-content">
+      <div class="card">
+        <h2>Admin - Add New Product</h2>
+        <div class="form-row">
+          <input type="text" id="new-prod-name" placeholder="Product Name">
+          <input type="text" id="new-prod-desc" placeholder="Description">
+          <input type="number" id="new-prod-price" placeholder="Price ($)">
+          <select id="new-prod-category">
+            <option value="Electronics">Electronics</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Home">Home</option>
+          </select>
+          <input type="number" id="new-prod-stock" placeholder="Stock Quantity">
+        </div>
+        <button class="btn" onclick="adminCreateProduct()">+ Add Product</button>
+      </div>
+
+      <div class="card">
+        <h2>Send Push Notification (Firebase Cloud Messaging)</h2>
+        <div class="form-row">
+          <input type="text" id="notif-title" placeholder="Title (e.g. Flash Sale!)">
+          <input type="text" id="notif-body" placeholder="Notification message...">
+          <button class="btn" onclick="sendPushNotification()">Send Notification</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Backend API & WebSocket URL
+    const BACKEND_URL = 'http://localhost:5001';
+    const API = `${BACKEND_URL}/api`;
+    let currentUser = JSON.parse(localStorage.getItem('user')) || null;
+    let token = localStorage.getItem('token') || '';
+
+    // Initialize Socket.io
+    const socket = io(BACKEND_URL);
+    socket.on('connect', () => {
+      document.getElementById('socket-status').textContent = '✅ Connected to Socket.io (Real-Time Active)';
+    });
+    socket.on('disconnect', () => {
+      document.getElementById('socket-status').textContent = '❌ Disconnected from Socket.io';
+    });
+
+    // Handle real-time inventory updates
+    socket.on('inventoryUpdate', (data) => {
+      const logs = document.getElementById('socket-logs');
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.textContent = `[${new Date().toLocaleTimeString()}] Event: ${data.type || 'INVENTORY_CHANGE'} - ${JSON.stringify(data)}`;
+      logs.prepend(item);
+      loadProducts(); // Automatically refresh products on live changes!
+    });
+
+    // Switch Tabs
+    function switchTab(tabId) {
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+
+      if (tabId === 'shop') loadProducts();
+      if (tabId === 'cart') loadCart();
+      if (tabId === 'orders') loadOrders();
+    }
+
+    // Update Header
+    function updateHeader() {
+      const info = document.getElementById('user-info');
+      const logoutBtn = document.getElementById('logout-btn');
+      if (currentUser) {
+        info.innerHTML = `Logged in as: <strong>${currentUser.name}</strong> <span class="badge badge-${currentUser.role}">${currentUser.role.toUpperCase()}</span>`;
+        logoutBtn.style.display = 'inline-block';
+      } else {
+        info.textContent = 'Not logged in';
+        logoutBtn.style.display = 'none';
+      }
+    }
+    updateHeader();
+
+    function logout() {
+      localStorage.clear();
+      currentUser = null;
+      token = '';
+      updateHeader();
+      alert('Logged out');
+      switchTab('auth');
+    }
+
+    // Auth Calls
+    async function registerUser() {
+      const name = document.getElementById('auth-name').value;
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+      const role = document.getElementById('auth-role').value;
+
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role })
+      });
+      const data = await res.json();
+      if (data.success) {
+        saveAuth(data);
+        alert('Registered and logged in!');
+      } else {
+        alert(data.message);
+      }
+    }
+
+    async function loginUser() {
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        saveAuth(data);
+        alert('Logged in successfully!');
+      } else {
+        alert(data.message);
+      }
+    }
+
+    async function socialLogin(provider) {
+      const email = prompt(`Enter ${provider} email:`, `test_${provider.toLowerCase()}@example.com`);
+      if (!email) return;
+
+      const endpoint = provider.toLowerCase() === 'google' ? '/auth/google' : '/auth/facebook';
+      const res = await fetch(`${API}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: `${provider} Demo User` })
+      });
+      const data = await res.json();
+      if (data.success) {
+        saveAuth(data);
+        alert(`${provider} login successful!`);
+      } else {
+        alert(data.message);
+      }
+    }
+
+    function saveAuth(data) {
+      token = data.token;
+      currentUser = data.user;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      updateHeader();
+    }
+
+    // Product Functions
+    async function loadProducts() {
+      const keyword = document.getElementById('search-keyword')?.value || '';
+      const category = document.getElementById('filter-category')?.value || '';
+      const minPrice = document.getElementById('min-price')?.value || '';
+      const maxPrice = document.getElementById('max-price')?.value || '';
+
+      const query = new URLSearchParams();
+      if (keyword) query.append('keyword', keyword);
+      if (category) query.append('category', category);
+      if (minPrice) query.append('minPrice', minPrice);
+      if (maxPrice) query.append('maxPrice', maxPrice);
+
+      const res = await fetch(`${API}/products?${query.toString()}`);
+      const data = await res.json();
+      const grid = document.getElementById('product-list');
+
+      if (!data.products || data.products.length === 0) {
+        grid.innerHTML = '<p>No products found.</p>';
+        return;
+      }
+
+      grid.innerHTML = data.products.map(p => `
+        <div class="product-card">
+          <div>
+            <h3>${p.name}</h3>
+            <p>${p.description || 'Quality product'}</p>
+            <div style="font-size:12px; color:#64748b; margin-bottom:8px;">Category: <strong>${p.category}</strong></div>
+          </div>
+          <div>
+            <div class="price-stock">
+              <span class="price">$${p.price}</span>
+              <span class="stock">Stock: ${p.stock}</span>
+            </div>
+            <button class="btn" style="width:100%;" onclick="addToCart('${p._id}')">Add to Cart</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function resetFilters() {
+      document.getElementById('search-keyword').value = '';
+      document.getElementById('filter-category').value = '';
+      document.getElementById('min-price').value = '';
+      document.getElementById('max-price').value = '';
+      loadProducts();
+    }
+
+    // Cart Functions
+    async function addToCart(productId) {
+      if (!token) return alert('Please login first');
+      const res = await fetch(`${API}/cart`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ productId, quantity: 1 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Added to cart!');
+        loadCart();
+      } else {
+        alert(data.message);
+      }
+    }
+
+    async function loadCart() {
+      if (!token) return;
+      const res = await fetch(`${API}/cart`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      const items = data.cart?.items || [];
+      document.getElementById('cart-count').textContent = items.length;
+
+      let total = 0;
+      const tbody = document.getElementById('cart-items');
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">Cart is empty</td></tr>';
+        document.getElementById('cart-total').textContent = '0';
+        return;
+      }
+
+      tbody.innerHTML = items.map(item => {
+        const prod = item.product || {};
+        const itemTotal = (prod.price || 0) * item.quantity;
+        total += itemTotal;
+        return `
+          <tr>
+            <td>${prod.name || 'Product'}</td>
+            <td>$${prod.price || 0}</td>
+            <td>${item.quantity}</td>
+            <td>$${itemTotal}</td>
+            <td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeCartItem('${prod._id || item._id}')">Remove</button></td>
+          </tr>
+        `;
+      }).join('');
+      document.getElementById('cart-total').textContent = total;
+    }
+
+    async function removeCartItem(id) {
+      const res = await fetch(`${API}/cart/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      loadCart();
+    }
+
+    // Checkout
+    async function checkout() {
+      if (!token) return alert('Please login first');
+      const res = await fetch(`${API}/orders`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Order placed successfully! Stock deducted in real-time.');
+        loadCart();
+        switchTab('orders');
+      } else {
+        alert(data.message);
+      }
+    }
+
+    // Orders (MongoDB Aggregation Pipeline)
+    async function loadOrders() {
+      if (!token) return;
+      const res = await fetch(`${API}/orders`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      const list = document.getElementById('orders-list');
+      if (!data.orders || data.orders.length === 0) {
+        list.innerHTML = '<p>No orders yet.</p>';
+        return;
+      }
+
+      list.innerHTML = data.orders.map(o => `
+        <div style="border:1px solid #e2e8f0; border-radius:6px; padding:12px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <strong>Order ID: ${o._id}</strong>
+            <span class="badge badge-${o.status === 'delivered' ? 'user' : 'admin'}">${o.status.toUpperCase()}</span>
+          </div>
+          <div>Items Count: ${o.itemsCount || o.items?.length} | Total: <strong>$${o.totalAmount}</strong></div>
+          <div style="font-size:12px; color:#64748b; margin-top:4px;">Date: ${new Date(o.createdAt).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
+    // Admin Functions
+    async function adminCreateProduct() {
+      if (!token || currentUser?.role !== 'admin') {
+        return alert('Admin login required to add products');
+      }
+
+      const name = document.getElementById('new-prod-name').value;
+      const description = document.getElementById('new-prod-desc').value;
+      const price = Number(document.getElementById('new-prod-price').value);
+      const category = document.getElementById('new-prod-category').value;
+      const stock = Number(document.getElementById('new-prod-stock').value);
+
+      const res = await fetch(`${API}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name, description, price, category, stock })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Product created! Real-time Socket.io update triggered.');
+        loadProducts();
+      } else {
+        alert(data.message);
+      }
+    }
+
+    async function sendPushNotification() {
+      if (!token) return alert('Login required');
+      const title = document.getElementById('notif-title').value;
+      const body = document.getElementById('notif-body').value;
+
+      const res = await fetch(`${API}/notifications/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ title, body })
+      });
+      const data = await res.json();
+      alert(data.message);
+    }
+  </script>
+</body>
+</html>
